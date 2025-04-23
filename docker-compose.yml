@@ -1,0 +1,143 @@
+services:
+  externalapi.orchestrator:
+    image: externalapiorchestrator
+    build:
+      context: .
+      dockerfile: ExternalApi.Orchestrator/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    ports:
+      - "8080:8080"
+    networks:
+      - nw      
+    # depends_on:
+      # elasticsearch:
+      #   condition: service_healthy     
+
+  internalapi01.booking:
+    image: internalapi01booking
+    build:
+      context: .
+      dockerfile: InternalApi01.Booking/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    ports:
+      - "8081:8080"
+    networks:
+      - nw      
+    # depends_on:
+      # elasticsearch:
+      #   condition: service_healthy    
+
+  internalapi02.payment:
+    image: internalapi02payment
+    build:
+      context: .
+      dockerfile: InternalApi02.Payment/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    ports:
+      - "8082:8080"
+    networks:
+      - nw      
+    # depends_on:
+      # elasticsearch:
+      #   condition: service_healthy    
+
+  internalapi03.notification:
+    image: internalapi03notification
+    build:
+      context: .
+      dockerfile: InternalApi03.Notification/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    ports:
+      - "8083:8080"     
+    networks:
+      - nw       
+    # depends_on:
+      # elasticsearch:
+      #   condition: service_healthy  
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.91.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318"         # HTTP OTLP receiver
+      - "8888:8888"         # health check
+    networks:
+      - nw
+    healthcheck: 
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5    
+    depends_on:
+      jaeger:
+        condition: service_started
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    ports:
+      - "16686:16686"       # Jaeger UI
+    networks:
+      - nw
+  # elasticsearch:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.18.0
+  #   environment:
+  #     - discovery.type=single-node
+  #     - xpack.security.enabled=false
+  #   ports:
+  #     - "9200:9200"
+  #   volumes:
+  #     - v01:/usr/share/elasticsearch/data
+  #   networks:
+  #     - nw
+  #   healthcheck: 
+  #     test: ["CMD", "curl", "-f", "http://localhost:9200"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:8.18.0 
+  #   ports:
+  #     - 5601:5601
+  #   environment:
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   depends_on:
+  #     elasticsearch:
+  #       condition: service_healthy      
+  #   networks:
+  #     - nw
+
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:latest
+  #   command: ["--config=/etc/otel/config.yaml"]
+  #   volumes:
+  #     - ./otel-collector-config.yaml:/etc/otel/config.yaml
+  #   ports:
+  #     - "4317:4317"
+  #   depends_on:
+  #     elasticsearch:
+  #       condition: service_healthy       
+  #   networks:
+  #     - nw         
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:13133/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  v01:
+    driver: local
+
+networks:
+  nw:
+    driver: bridge

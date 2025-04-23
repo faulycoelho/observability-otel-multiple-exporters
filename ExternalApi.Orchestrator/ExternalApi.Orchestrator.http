@@ -1,0 +1,6 @@
+@ExternalApi.Orchestrator_HostAddress = http://localhost:5072
+
+GET {{ExternalApi.Orchestrator_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

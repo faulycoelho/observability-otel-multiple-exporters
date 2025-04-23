@@ -1,0 +1,22 @@
+{
+    "Serilog": {
+      "MinimumLevel": "Information",
+      "WriteTo": [
+        {
+          "Name": "Console"
+        },
+        {
+          "Name": "Elasticsearch",
+          "Args": {
+            "nodeUris": "http://elasticsearch:9200",
+            "indexFormat": "observability-distributed-%{yyyy.MM.dd}"
+          }
+        }
+      ],
+      "Enrich": [ "FromLogContext", "WithSpan" ],
+      "Properties": {
+        "Application": "MinhaApiObservability"
+      }
+    }
+  }
+  
