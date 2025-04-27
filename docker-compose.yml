@@ -9,51 +9,66 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
     ports:
       - "8080:8080"
+    # depends_on:
+    #    sqldb:
+    #      condition: service_healthy
     networks:
       - nw       
 
   internalapi01.booking:
     image: internalapi01booking
+    restart: always
     build:
       context: .
       dockerfile: InternalApi01.Booking/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Username=postgres;Password=postgres;Database=bookingapi
+      - ConnectionStrings__DefaultConnection=Host=postgredb;Port=5432;Username=postgres;Password=postgres;Database=bookingapi
     ports:
       - "8081:8080"
     networks:
       - nw      
-
   internalapi02.payment:
     image: internalapi02payment
+    restart: always
     build:
       context: .
       dockerfile: InternalApi02.Payment/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=Server=sqldb;Database=PaymentDb;User Id=sa;Password=@Password581;Encrypt=False;TrustServerCertificate=True       
+      # # OpenTelemetry environmental variables:      
+      # - OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED=true
+      # - OTEL_DOTNET_AUTO_TRACES_ADONET_ENABLED=true
+      # - OTEL_DOTNET_AUTO_TRACES_ADONET_SQLCLIENT_ENABLED=true
+      # - OTEL_SERVICE_NAME=paymentapicompose
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      # - OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_SOURCES=paymentapi.traces.Service
+      # - OTEL_DOTNET_AUTO_METRICS_ADDITIONAL_SOURCES=paymentapi.metrics.Service"     
+      # - DOTNET_EnableDiagnostics=1
+      # - OTEL_DOTNET_AUTO_METRICS_ENABLED=true
+      # - OTEL_DOTNET_AUTO_LOGS_ENABLED=true
     ports:
       - "8082:8080"
     networks:
       - nw      
-
-  internalapi03.notification:
-    image: internalapi03notification
-    build:
-      context: .
-      dockerfile: InternalApi03.Notification/Dockerfile
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-    ports:
-      - "8083:8080"     
-    networks:
-      - nw       
+  # internalapi03.notification:
+  #   image: internalapi03notification
+  #   build:
+  #     context: .
+  #     dockerfile: InternalApi03.Notification/Dockerfile
+  #   environment:
+  #     - ASPNETCORE_ENVIRONMENT=Development
+  #     - ASPNETCORE_HTTP_PORTS=8080
+  #   ports:
+  #     - "8083:8080"     
+  #   networks:
+  #     - nw       
 
 ## DATABASES:
-  db:
+  postgredb:
     image: postgres:15
     restart: always
     environment:
@@ -67,6 +82,16 @@ services:
     networks:
       - nw
 
+  sqldb:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=@Password581
+    ports:
+      - "1433:1433"
+    networks:
+      - nw
+ 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.91.0
     command: ["--config=/etc/otel-collector-config.yaml"]

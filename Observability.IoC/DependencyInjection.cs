@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -47,14 +48,18 @@ namespace Observability.IoC
 
 
             Services.AddOpenTelemetry()
-                    .WithTracing(tracerProviderBuilder =>
+                    .WithTracing(tracing =>
                     {
-                        tracerProviderBuilder
+                        tracing
                             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
                             .AddSource(serviceName)
                             .AddAspNetCoreInstrumentation()
                             .AddHttpClientInstrumentation()    
                             .AddNpgsql()
+                            .AddSqlClientInstrumentation(opt =>  
+                            {
+                                opt.SetDbStatementForText = true; 
+                            })      
                             .AddOtlpExporter(opt =>
                             {
                                 opt.Endpoint = new Uri("http://otel-collector:4317");
