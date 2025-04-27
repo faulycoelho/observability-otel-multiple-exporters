@@ -15,9 +15,9 @@ app.MapGet("/startall", async ([FromServices] IHttpClientFactory httpClientFacto
     var paymentClient = httpClientFactory.CreateClient("payment");
     var notificationClient = httpClientFactory.CreateClient("notification");
 
-    var bookingTask = bookingClient.GetAsync("products");
+    var bookingTask = bookingClient.GetAsync("bookings");
     var paymentTask = paymentClient.GetAsync("payments");
-    var notificationTask = notificationClient.GetAsync("test");
+    var notificationTask = notificationClient.GetAsync("users");
 
     var responses = await Task.WhenAll(bookingTask, paymentTask, notificationTask);
 
@@ -31,7 +31,7 @@ app.MapGet("/startall", async ([FromServices] IHttpClientFactory httpClientFacto
 app.MapGet("/start", async ([FromServices] IHttpClientFactory httpClientFactory) =>
 {
     var bookingClient = httpClientFactory.CreateClient("booking");
-    var resultbooking = await bookingClient.GetAsync("products");
+    var resultbooking = await bookingClient.GetAsync("bookings");
     var msgbooking = await resultbooking.Content.ReadAsStringAsync();
 
     var paymentClient = httpClientFactory.CreateClient("payment");
@@ -39,7 +39,7 @@ app.MapGet("/start", async ([FromServices] IHttpClientFactory httpClientFactory)
     var msgpayment = await resultpayment.Content.ReadAsStringAsync();
 
     var notificationClient = httpClientFactory.CreateClient("notification");
-    var resultnotification = await notificationClient.GetAsync("test");
+    var resultnotification = await notificationClient.GetAsync("users");
     var msgnotification = await resultnotification.Content.ReadAsStringAsync();
 
     return Results.Ok($"Results: {msgbooking}; {msgpayment}; {msgnotification}");

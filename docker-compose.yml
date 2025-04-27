@@ -9,9 +9,6 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
     ports:
       - "8080:8080"
-    # depends_on:
-    #    sqldb:
-    #      condition: service_healthy
     networks:
       - nw       
 
@@ -38,34 +35,25 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=Server=sqldb;Database=PaymentDb;User Id=sa;Password=@Password581;Encrypt=False;TrustServerCertificate=True       
-      # # OpenTelemetry environmental variables:      
-      # - OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED=true
-      # - OTEL_DOTNET_AUTO_TRACES_ADONET_ENABLED=true
-      # - OTEL_DOTNET_AUTO_TRACES_ADONET_SQLCLIENT_ENABLED=true
-      # - OTEL_SERVICE_NAME=paymentapicompose
-      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      # - OTEL_DOTNET_AUTO_TRACES_ADDITIONAL_SOURCES=paymentapi.traces.Service
-      # - OTEL_DOTNET_AUTO_METRICS_ADDITIONAL_SOURCES=paymentapi.metrics.Service"     
-      # - DOTNET_EnableDiagnostics=1
-      # - OTEL_DOTNET_AUTO_METRICS_ENABLED=true
-      # - OTEL_DOTNET_AUTO_LOGS_ENABLED=true
+      - ConnectionStrings__DefaultConnection=Server=sqldb;Database=PaymentDb;User Id=sa;Password=@Password581;Encrypt=False;TrustServerCertificate=True        
     ports:
       - "8082:8080"
     networks:
       - nw      
-  # internalapi03.notification:
-  #   image: internalapi03notification
-  #   build:
-  #     context: .
-  #     dockerfile: InternalApi03.Notification/Dockerfile
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - ASPNETCORE_HTTP_PORTS=8080
-  #   ports:
-  #     - "8083:8080"     
-  #   networks:
-  #     - nw       
+  internalapi03.notification:
+    image: internalapi03notification
+    restart: always
+    build:
+      context: .
+      dockerfile: InternalApi03.Notification/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=redis:6379
+    ports:
+      - "8083:8080"     
+    networks:
+      - nw       
 
 ## DATABASES:
   postgredb:
@@ -92,6 +80,14 @@ services:
     networks:
       - nw
  
+  redis:
+    image: redis:7
+    container_name: redis-server
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - nw
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.91.0
     command: ["--config=/etc/otel-collector-config.yaml"]

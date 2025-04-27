@@ -59,7 +59,11 @@ namespace Observability.IoC
                             .AddSqlClientInstrumentation(opt =>  
                             {
                                 opt.SetDbStatementForText = true; 
-                            })      
+                            })
+                            .AddRedisInstrumentation(options =>
+                            {
+                                options.SetVerboseDatabaseStatements = true;
+                            })
                             .AddOtlpExporter(opt =>
                             {
                                 opt.Endpoint = new Uri("http://otel-collector:4317");
