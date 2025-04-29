@@ -1,5 +1,6 @@
 using InternalApi03.Notification.Models;
 using InternalApi03.Notification.Seed;
+using InternalApi03.Notification.Worker;
 using Observability.IoC;
 using OpenTelemetry.Trace;
 using StackExchange.Redis;
@@ -8,10 +9,13 @@ using System.Text.Json;
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureLog();
 builder.Services.ConfigureServices("notification");
+
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-{ 
+{
     return ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("DefaultConnection")!);
 });
+
+builder.Services.AddHostedService<WorkerEmail>();
 
 var app = builder.Build();
 app.UseHttpsRedirection();
@@ -59,7 +63,7 @@ app.MapGet("/users/{id}", async (int id, IConnectionMultiplexer redis) =>
     var user = JsonSerializer.Deserialize<UserEntity>(value!);
     return Results.Ok(user);
 });
- 
+
 
 
 app.Run();

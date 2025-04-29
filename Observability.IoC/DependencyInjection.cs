@@ -1,9 +1,12 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
+using Observability.IoC.Shared;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using RabbitMQ.Client;
+using System.Diagnostics;
 
 namespace Observability.IoC
 {
@@ -32,6 +35,21 @@ namespace Observability.IoC
         public static IServiceCollection ConfigureServices(this IServiceCollection Services, string serviceName)
         {
             Services.AddLogging();
+
+            Services.AddSingleton(new ActivitySource("Observability.ActivitySource"));
+
+            // RabbitMQ
+            var factory = new ConnectionFactory() { HostName = "rabbitmq" };
+            var connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
+            var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
+            channel.ExchangeDeclareAsync("ecommerce", ExchangeType.Topic).GetAwaiter().GetResult();
+            channel.QueueDeclareAsync("payment", durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
+            channel.QueueBindAsync("payment", "ecommerce", "booking.created").GetAwaiter().GetResult();
+            channel.QueueDeclareAsync("email", durable: true, exclusive: false, autoDelete: false).GetAwaiter().GetResult();
+            channel.QueueBindAsync("email", "ecommerce", "payment.approved").GetAwaiter().GetResult();
+
+            Services.AddSingleton(channel);
+            Services.AddSingleton<RabbitMqProducer>();
 
             Services.AddHttpClient("booking", client =>
             {

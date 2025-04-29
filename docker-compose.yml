@@ -1,6 +1,7 @@
 services:
   externalapi.orchestrator:
     image: externalapiorchestrator
+    restart: always
     build:
       context: .
       dockerfile: ExternalApi.Orchestrator/Dockerfile
@@ -113,6 +114,17 @@ services:
     networks:
       - nw
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"   
+    networks:
+      - nw
+      
 volumes:
   v01:
     driver: local

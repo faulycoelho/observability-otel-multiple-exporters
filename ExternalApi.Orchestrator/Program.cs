@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Observability.IoC;
+using Observability.IoC.Shared;
 using OpenTelemetry.Trace;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureLog();
@@ -9,7 +12,70 @@ builder.Services.ConfigureServices("orchestrator");
 var app = builder.Build();
 app.UseHttpsRedirection();
 
-app.MapGet("/startall", async ([FromServices] IHttpClientFactory httpClientFactory) =>
+
+app.MapPost("/transaction", async ([FromServices] IHttpClientFactory httpClientFactory, [FromBody] BookingRequestDto request) =>
+{
+    if (request is null)
+    {
+        return Results.BadRequest("Invalid request.");
+    }
+    var bookingClient = httpClientFactory.CreateClient("booking");
+    var response = await bookingClient.PostAsJsonAsync("bookings", request);
+    if (!response.IsSuccessStatusCode)
+    {
+        return Results.Problem($"Failed to send request to bookings service. Status code: {response.StatusCode}");
+    }
+
+    var booking = await response.Content.ReadFromJsonAsync<BookingDto>();
+    if (booking is null)
+        return Results.Problem("Invalid booking payload.");
+
+    return Results.Ok(new
+    {
+        Message = "Request received successfully",
+        Response = booking
+    });
+});
+
+app.MapGet("/transaction/{Id}", async ([FromServices] IHttpClientFactory httpClientFactory, int Id) =>
+{
+    var bookingClient = httpClientFactory.CreateClient("booking");
+    var paymentClient = httpClientFactory.CreateClient("payment");
+
+    var bookingTask = bookingClient.GetAsync($"bookings/{Id}");
+    var paymentTask = paymentClient.GetAsync($"bookings/{Id}/payments");
+
+    var responses = await Task.WhenAll(bookingTask, paymentTask);
+
+    var bookingResponse = responses[0];
+    var paymentResponse = responses[1];
+
+    if (!bookingResponse.IsSuccessStatusCode)
+        return Results.Problem("Booking not found.");
+
+    if (!paymentResponse.IsSuccessStatusCode)
+        return Results.Problem("Payment not found.");
+
+    var bookingString = await bookingResponse.Content.ReadAsStringAsync();
+    var booking = JsonSerializer.Deserialize<BookingDto>(bookingString);
+
+    if (booking is null)
+        return Results.Problem("Invalid booking payload.");
+
+    var paymentString = await paymentResponse.Content.ReadAsStringAsync();
+    var notificationClient = httpClientFactory.CreateClient("notification");
+    var notificationTask = await notificationClient.GetAsync($"users/{booking.userId}");
+
+    if (!notificationTask.IsSuccessStatusCode)
+        return Results.Problem("User not found.");
+
+    var notificationResponseString = await notificationTask.Content.ReadAsStringAsync();
+
+    return Results.Ok($"Results: {bookingString}; {paymentString}; {notificationResponseString}");
+});
+
+
+app.MapGet("/start-parallel", async ([FromServices] IHttpClientFactory httpClientFactory) =>
 {
     var bookingClient = httpClientFactory.CreateClient("booking");
     var paymentClient = httpClientFactory.CreateClient("payment");
@@ -28,7 +94,7 @@ app.MapGet("/startall", async ([FromServices] IHttpClientFactory httpClientFacto
     return Results.Ok($"Results: {bookingResponse}; {paymentResponse}; {notificationResponse}");
 });
 
-app.MapGet("/start", async ([FromServices] IHttpClientFactory httpClientFactory) =>
+app.MapGet("/start-sequential", async ([FromServices] IHttpClientFactory httpClientFactory) =>
 {
     var bookingClient = httpClientFactory.CreateClient("booking");
     var resultbooking = await bookingClient.GetAsync("bookings");
@@ -45,13 +111,12 @@ app.MapGet("/start", async ([FromServices] IHttpClientFactory httpClientFactory)
     return Results.Ok($"Results: {msgbooking}; {msgpayment}; {msgnotification}");
 });
 
-
-app.MapGet("/ping", (TracerProvider provider) =>
-{
-    var _tracer = provider.GetTracer("orchestrator");
-    using var span = _tracer.StartActiveSpan("manual-span", SpanKind.Internal);
-    span.SetAttribute("custom-tag", "testing");
-    return Results.Ok($"pong: {DateTime.Now}");
-});
-
 app.Run();
+
+public class BookingDto
+{
+    public int id { get; set; }
+    public int userId { get; set; }
+    public string code { get; set; } = string.Empty;
+    public decimal price { get; set; }
+}

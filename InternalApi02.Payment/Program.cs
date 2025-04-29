@@ -1,5 +1,6 @@
 using InternalApi02.Payment.Data;
 using InternalApi02.Payment.Seed;
+using InternalApi02.Payment.Worker;
 using Microsoft.EntityFrameworkCore;
 using Observability.IoC;
 
@@ -8,6 +9,10 @@ builder.Host.ConfigureLog();
 builder.Services.ConfigureServices("payment");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
+builder.Services.AddHostedService<WorkerPayment>();
+
 
 var app = builder.Build();
 app.UseHttpsRedirection();
@@ -26,13 +31,13 @@ app.MapGet("/payments", async (AppDbContext db) =>
     await db.Payments.ToListAsync());
 
 
-app.MapGet("/payments/{transactionCode}", async (string transactionCode, AppDbContext db) =>
+app.MapGet("/bookings/{bookingId}/payments", async (int bookingId, AppDbContext db) =>
 {
-    var booking = await db.Payments.FirstOrDefaultAsync(p => p.TransactionCode == transactionCode);
+    var payments = await db.Payments.Where(p => p.TransactionCode == bookingId.ToString()).ToListAsync();
 
-    return booking == null
+    return payments == null
     ? Results.NotFound("payment not found")
-    : Results.Ok(booking);
+    : Results.Ok(payments);
 });
 
 app.Run();

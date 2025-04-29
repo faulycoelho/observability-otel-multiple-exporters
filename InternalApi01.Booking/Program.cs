@@ -1,8 +1,10 @@
 using InternalApi01.Booking.Data;
 using InternalApi01.Booking.Models;
 using InternalApi01.Booking.Seed;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Observability.IoC;
+using Observability.IoC.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureLog();
@@ -24,13 +26,30 @@ using (var scope = app.Services.CreateScope())
 app.MapGet("/bookings", async (AppDbContext db) =>
     await db.Bookings.ToListAsync());
 
-app.MapGet("/bookings/{code}", async (string code, AppDbContext db) =>
+app.MapGet("/bookings/{Id}", async (int Id, AppDbContext db) =>
 {
-    var booking = await db.Bookings.FirstOrDefaultAsync(p => p.Code == code);
+    var booking = await db.Bookings.FirstOrDefaultAsync(p => p.Id == Id);
 
     return booking == null
     ? Results.NotFound("Booking id not found")
-    : Results.Ok(booking);    
+    : Results.Ok(booking);
+});
+
+app.MapPost("/bookings", async ([FromBody] BookingRequestDto request, AppDbContext db, RabbitMqProducer _producer) =>
+{
+    var newBooking = new Booking() { Price = request.value, UserId = request.userid, Code = Guid.NewGuid().ToString() };
+    db.Bookings.Add(newBooking);
+    await db.SaveChangesAsync();
+    await _producer.PublishAsync(
+        "ecommerce",
+        "booking.created",
+        new BookingRequestInternalDto(
+            newBooking.UserId,
+            newBooking.Price,
+            newBooking.Id,
+            newBooking.Code));
+
+    return Results.Ok(newBooking);
 });
 
 app.Run();
