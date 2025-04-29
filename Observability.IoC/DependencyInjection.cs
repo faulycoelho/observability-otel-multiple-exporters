@@ -7,6 +7,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using RabbitMQ.Client;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 namespace Observability.IoC
 {
@@ -87,7 +88,21 @@ namespace Observability.IoC
                                 opt.Endpoint = new Uri("http://otel-collector:4317");
                                 opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
                             });
-                    });
+                    })
+                     .WithMetrics(metrics =>
+                    {
+                        metrics
+                            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+                            .AddAspNetCoreInstrumentation()
+                            .AddHttpClientInstrumentation()
+                            .AddRuntimeInstrumentation()
+                            .AddProcessInstrumentation()
+                            .AddOtlpExporter(opt =>
+                            {
+                                opt.Endpoint = new Uri("http://otel-collector:4317");
+                                opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+                            });
+                    });             
             return Services;
         }
     }

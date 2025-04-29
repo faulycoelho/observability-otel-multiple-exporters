@@ -9,8 +9,13 @@ exporters:
     endpoint: jaeger:4317
     tls:
       insecure: true
+  prometheus:
+    endpoint: "0.0.0.0:8889" 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       exporters: [otlp/jaeger]
+    metrics:             
+      receivers: [otlp]
+      exporters: [prometheus]      
