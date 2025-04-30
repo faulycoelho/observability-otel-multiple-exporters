@@ -13,8 +13,9 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 
 
-app.MapPost("/transaction", async ([FromServices] IHttpClientFactory httpClientFactory, [FromBody] BookingRequestDto request) =>
+app.MapPost("/transaction", async ([FromServices] IHttpClientFactory httpClientFactory, [FromBody] BookingRequestDto request, ILogger<Program> logger) =>
 {
+    logger.LogInformation("Creating a new transaction: {@request}", request);
     if (request is null)
     {
         return Results.BadRequest("Invalid request.");
@@ -29,6 +30,8 @@ app.MapPost("/transaction", async ([FromServices] IHttpClientFactory httpClientF
     var booking = await response.Content.ReadFromJsonAsync<BookingDto>();
     if (booking is null)
         return Results.Problem("Invalid booking payload.");
+
+    logger.LogInformation("New transaction created: {@booking}", booking);
 
     return Results.Ok(new
     {
@@ -117,6 +120,6 @@ public class BookingDto
 {
     public int id { get; set; }
     public int userId { get; set; }
-    public string code { get; set; } = string.Empty;
+    public string traceId { get; set; } = string.Empty;
     public decimal price { get; set; }
 }

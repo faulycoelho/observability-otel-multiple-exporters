@@ -33,7 +33,7 @@ namespace InternalApi02.Payment.Worker
                 if (stoppingToken.IsCancellationRequested)
                     return;
              
-                logger.LogInformation($"[Payment] Processing payment from booking: {message.bookingId} ({message.bookingCode})");
+                logger.LogInformation($"[Payment] Processing payment from booking: {message.bookingId} ({message.traceId})");
 
                 using (var scope = serviceScopeFactory.CreateScope())
                 {
@@ -41,7 +41,7 @@ namespace InternalApi02.Payment.Worker
 
                     db.Payments.Add(new Models.PaymentItem()
                     {
-                        TransactionCode = message.bookingId.ToString(),
+                        BookingId = message.bookingId,
                         Value = message.value,
                     });
                     await db.SaveChangesAsync();

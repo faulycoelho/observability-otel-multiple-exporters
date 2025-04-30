@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Observability.IoC;
 using Observability.IoC.Shared;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.ConfigureLog("booking");
@@ -37,9 +38,10 @@ app.MapGet("/bookings/{Id}", async (int Id, AppDbContext db) =>
 
 app.MapPost("/bookings", async ([FromBody] BookingRequestDto request, AppDbContext db, RabbitMqProducer _producer, ILogger<Program> logger) =>
 {
-    logger.LogInformation("Received booking request: {@request}", request);
+    logger.LogInformation("[Booking] Received booking request: {@request}", request);
+    var traceId = Activity.Current?.TraceId.ToString();
 
-    var newBooking = new Booking() { Price = request.value, UserId = request.userid, Code = Guid.NewGuid().ToString() };
+    var newBooking = new Booking() { Price = request.value, UserId = request.userid, TraceId = traceId };
     db.Bookings.Add(newBooking);
     await db.SaveChangesAsync();
     await _producer.PublishAsync(
@@ -49,9 +51,9 @@ app.MapPost("/bookings", async ([FromBody] BookingRequestDto request, AppDbConte
             newBooking.UserId,
             newBooking.Price,
             newBooking.Id,
-            newBooking.Code));
+            newBooking.TraceId));
 
-    logger.LogInformation("Booking created: {@newBooking}", newBooking);
+    logger.LogInformation("[Booking] Booking created: {@newBooking}", newBooking);
     return Results.Ok(newBooking);
 });
 

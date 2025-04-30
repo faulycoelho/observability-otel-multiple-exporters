@@ -3,7 +3,7 @@
     public class PaymentItem
     {
         public int Id { get; set; }
-        public string TransactionCode { get; set; } = null!;
+        public int BookingId { get; set; }
         public decimal Value { get; set; }
     }
 }
