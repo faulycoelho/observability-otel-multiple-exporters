@@ -80,7 +80,7 @@ services:
       - "1433:1433"
     networks:
       - nw
- 
+
   redis:
     image: redis:7
     container_name: redis-server
@@ -95,8 +95,8 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - "4317:4317"
-      - "4318:4318"         
+      # - "4317:4317"
+      # - "4318:4318"         
       - "8888:8888"         
       - "8889:8889"
     networks:
@@ -142,19 +142,43 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana      
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: unless-stopped
     networks:
       - nw
+## logs:
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yaml:/etc/loki/local-config.yaml
+    networks:
+      - nw      
 
+  tempo:
+    image: grafana/tempo:2.3.1
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "3200:3200"      # Tempo HTTP API
+      - "4317:4317"      # OTLP gRPC
+      - "4318:4318"      # OTLP HTTP
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+    networks:
+      - nw      
 volumes:
   v01:
     driver: local
   pgdata:
     driver: local
-
+  grafana-storage:
+    driver: local
 networks:
   nw:
     driver: bridge

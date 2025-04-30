@@ -6,30 +6,29 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using RabbitMQ.Client;
+using Serilog;
+using Serilog.Enrichers.Span;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 
 namespace Observability.IoC
 {
     public static class DependencyInjection
     {
-        public static IHostBuilder ConfigureLog(this IHostBuilder hostBuilder)
+        public static IHostBuilder ConfigureLog(this IHostBuilder hostBuilder, string serviceName)
         {
-            //hostBuilder.UseSerilog((context, configuration) =>
-            //{
-            //    configuration
-            //    .WriteTo
-            //    .Elasticsearch(new[] { new Uri("http://elasticsearch:9200") }, opts =>
-            //    {
-            //        opts.DataStream = new DataStreamName("logs-api", "example", "demo");
-            //        opts.BootstrapMethod = BootstrapMethod.Failure;
-            //    })
-            //    .Enrich.FromLogContext()
-            //    .Enrich.WithSpan()
-            //    .ReadFrom
-            //    .Configuration(context.Configuration);
-            //});
-            //return hostBuilder;
+            hostBuilder.UseSerilog((context, configuration) =>
+            {
+                configuration
+                    .Enrich.FromLogContext()
+                    .Enrich.WithSpan()
+                    .Enrich.WithProperty("service.name", serviceName)
+                    .WriteTo.OpenTelemetry(options =>
+                    {
+                        options.Endpoint = "http://otel-collector:4317";
+                        options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
+                    });
+            });
+
             return hostBuilder;
         }
 
@@ -73,11 +72,11 @@ namespace Observability.IoC
                             .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
                             .AddSource(serviceName)
                             .AddAspNetCoreInstrumentation()
-                            .AddHttpClientInstrumentation()    
+                            .AddHttpClientInstrumentation()
                             .AddNpgsql()
-                            .AddSqlClientInstrumentation(opt =>  
+                            .AddSqlClientInstrumentation(opt =>
                             {
-                                opt.SetDbStatementForText = true; 
+                                opt.SetDbStatementForText = true;
                             })
                             .AddRedisInstrumentation(options =>
                             {
@@ -102,7 +101,7 @@ namespace Observability.IoC
                                 opt.Endpoint = new Uri("http://otel-collector:4317");
                                 opt.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
                             });
-                    });             
+                    });
             return Services;
         }
     }

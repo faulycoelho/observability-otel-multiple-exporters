@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Observability.IoC;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.ConfigureLog();
+builder.Host.ConfigureLog("payment");
 builder.Services.ConfigureServices("payment");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));

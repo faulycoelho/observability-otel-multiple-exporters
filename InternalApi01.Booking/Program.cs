@@ -7,7 +7,7 @@ using Observability.IoC;
 using Observability.IoC.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.ConfigureLog();
+builder.Host.ConfigureLog("booking");
 builder.Services.ConfigureServices("booking");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -35,8 +35,10 @@ app.MapGet("/bookings/{Id}", async (int Id, AppDbContext db) =>
     : Results.Ok(booking);
 });
 
-app.MapPost("/bookings", async ([FromBody] BookingRequestDto request, AppDbContext db, RabbitMqProducer _producer) =>
+app.MapPost("/bookings", async ([FromBody] BookingRequestDto request, AppDbContext db, RabbitMqProducer _producer, ILogger<Program> logger) =>
 {
+    logger.LogInformation("Received booking request: {@request}", request);
+
     var newBooking = new Booking() { Price = request.value, UserId = request.userid, Code = Guid.NewGuid().ToString() };
     db.Bookings.Add(newBooking);
     await db.SaveChangesAsync();
@@ -49,6 +51,7 @@ app.MapPost("/bookings", async ([FromBody] BookingRequestDto request, AppDbConte
             newBooking.Id,
             newBooking.Code));
 
+    logger.LogInformation("Booking created: {@newBooking}", newBooking);
     return Results.Ok(newBooking);
 });
 

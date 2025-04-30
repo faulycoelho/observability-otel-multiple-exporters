@@ -6,7 +6,7 @@ using OpenTelemetry.Trace;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.ConfigureLog();
+builder.Host.ConfigureLog("orchestrator");
 builder.Services.ConfigureServices("orchestrator");
 
 var app = builder.Build();
