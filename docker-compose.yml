@@ -1,4 +1,5 @@
 services:
+##.NET APIs:
   externalapi.orchestrator:
     image: externalapiorchestrator
     restart: always
@@ -12,7 +13,6 @@ services:
       - "8080:8080"
     networks:
       - nw       
-
   internalapi01.booking:
     image: internalapi01booking
     restart: always
@@ -55,8 +55,18 @@ services:
       - "8083:8080"     
     networks:
       - nw       
-
-## DATABASES:
+## Message broker:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"   
+    networks:
+      - nw
+## Databases:
   postgredb:
     image: postgres:15
     restart: always
@@ -70,7 +80,6 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - nw
-
   sqldb:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
@@ -78,9 +87,10 @@ services:
       - SA_PASSWORD=@Password581
     ports:
       - "1433:1433"
+    volumes:
+      - sqlvolume:/var/opt/mssql
     networks:
       - nw
-
   redis:
     image: redis:7
     container_name: redis-server
@@ -89,6 +99,7 @@ services:
     restart: always
     networks:
       - nw
+  ##  OTEL Collector:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.91.0
     command: ["--config=/etc/otel-collector-config.yaml"]
@@ -109,23 +120,6 @@ services:
     depends_on:
       jaeger:
         condition: service_started
-  jaeger:
-    image: jaegertracing/all-in-one:1.56
-    ports:
-      - "16686:16686"       
-    networks:
-      - nw
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: "guest"
-      RABBITMQ_DEFAULT_PASS: "guest"   
-    networks:
-      - nw
 ## metrics:
   prometheus:
     image: prom/prometheus:latest
@@ -160,7 +154,7 @@ services:
       - ./loki-config.yaml:/etc/loki/local-config.yaml
     networks:
       - nw      
-
+## traces:
   tempo:
     image: grafana/tempo:2.3.1
     command: ["-config.file=/etc/tempo.yaml"]
@@ -172,8 +166,15 @@ services:
       - ./tempo.yaml:/etc/tempo.yaml
     networks:
       - nw      
-volumes:
-  v01:
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    ports:
+      - "16686:16686"       
+    networks:
+      - nw 
+
+volumes: 
+  sqlvolume:
     driver: local
   pgdata:
     driver: local
