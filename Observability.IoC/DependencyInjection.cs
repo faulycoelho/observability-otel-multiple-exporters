@@ -64,12 +64,19 @@ namespace Observability.IoC
                 client.BaseAddress = new Uri("http://internalapi03.notification:8080/");
             });
 
+            var resourceBuilder = ResourceBuilder.CreateDefault()
+                .AddService(serviceName, serviceVersion: "1.0.0")
+                .AddAttributes(new[]
+                {
+                    new KeyValuePair<string, object>("deployment.environment", "production"),
+                    new KeyValuePair<string, object>("host.name", Environment.MachineName)
+                });
 
             Services.AddOpenTelemetry()
                     .WithTracing(tracing =>
                     {
                         tracing
-                            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+                            .SetResourceBuilder(resourceBuilder)
                             .AddSource(serviceName)
                             .AddAspNetCoreInstrumentation()
                             .AddHttpClientInstrumentation()
@@ -91,7 +98,7 @@ namespace Observability.IoC
                      .WithMetrics(metrics =>
                     {
                         metrics
-                            .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
+                            .SetResourceBuilder(resourceBuilder)
                             .AddAspNetCoreInstrumentation()
                             .AddHttpClientInstrumentation()
                             .AddRuntimeInstrumentation()
