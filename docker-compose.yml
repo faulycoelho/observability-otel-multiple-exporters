@@ -2,6 +2,7 @@ services:
 ##.NET APIs:
   externalapi.orchestrator:
     image: externalapiorchestrator
+    hostname: host-orchestrator
     restart: always
     build:
       context: .
@@ -15,6 +16,7 @@ services:
       - nw       
   internalapi01.booking:
     image: internalapi01booking
+    hostname: host-booking
     restart: always
     build:
       context: .
@@ -29,6 +31,7 @@ services:
       - nw      
   internalapi02.payment:
     image: internalapi02payment
+    hostname: host-payment
     restart: always
     build:
       context: .
@@ -43,6 +46,7 @@ services:
       - nw      
   internalapi03.notification:
     image: internalapi03notification
+    hostname: host-notification
     restart: always
     build:
       context: .

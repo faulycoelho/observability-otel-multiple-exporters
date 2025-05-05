@@ -8,8 +8,7 @@ using Observability.IoC.Shared;
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.ConfigureLog("booking");
-builder.Services.ConfigureServices("booking");
+builder.Configure("booking");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

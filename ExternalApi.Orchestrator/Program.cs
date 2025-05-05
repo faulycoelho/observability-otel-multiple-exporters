@@ -1,13 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Observability.IoC;
 using Observability.IoC.Shared;
-using OpenTelemetry.Trace;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.ConfigureLog("orchestrator");
-builder.Services.ConfigureServices("orchestrator");
+builder.Configure("orchestrator");
 
 var app = builder.Build();
 app.UseHttpsRedirection();
@@ -32,6 +29,16 @@ app.MapPost("/transaction", async ([FromServices] IHttpClientFactory httpClientF
         return Results.Problem("Invalid booking payload.");
 
     logger.LogInformation("New transaction created: {@booking}", booking);
+
+    if (app.Environment.IsDevelopment())
+    {
+        // For development/testing purposes only. Do NOT use in production.
+        // Forces a full garbage collection to trigger runtime metrics (e.g., GC heap size).
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+    }
 
     return Results.Ok(new
     {

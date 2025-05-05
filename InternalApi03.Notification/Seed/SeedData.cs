@@ -1,5 +1,4 @@
-﻿using Elastic.CommonSchema;
-using InternalApi03.Notification.Models;
+﻿using InternalApi03.Notification.Models;
 using StackExchange.Redis;
 using System.Text.Json;
 

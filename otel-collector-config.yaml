@@ -4,30 +4,58 @@ receivers:
       http:
       grpc:
 
+
 exporters:
   otlp/jaeger:
     endpoint: jaeger:4317
     tls:
       insecure: true
+
   otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
+
   prometheus:
-    endpoint: "0.0.0.0:8889" 
+    endpoint: "0.0.0.0:8889"
     resource_to_telemetry_conversion:
       enabled: true
+
   loki:
     endpoint: http://loki:3100/loki/api/v1/push
+
+processors:
+  batch:
+  attributes:
+    actions:
+      - action: insert
+        key: loki.attribute.labels
+        value: service_name, deployment_environment
+
+      - action: upsert
+        from_attribute: deployment_environment
+        key: deployment.environment
+
+  resource:
+    attributes:
+      - action: insert
+        key: loki.resource.labels
+        value: service.name, deployment.environment
+
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
+      processors: [batch]
       exporters: [otlp/jaeger, otlp/tempo]
-    metrics:             
+
+    metrics:
       receivers: [otlp]
-      exporters: [prometheus]      
+      processors: [batch]
+      exporters: [prometheus]
+
     logs:
       receivers: [otlp]
+      processors: [resource, attributes, batch]
       exporters: [loki]

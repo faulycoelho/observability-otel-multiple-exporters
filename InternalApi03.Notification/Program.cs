@@ -7,8 +7,7 @@ using StackExchange.Redis;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Host.ConfigureLog("notification");
-builder.Services.ConfigureServices("notification");
+builder.Configure("notification"); 
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
